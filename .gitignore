@@ -134,3 +134,4 @@ experiments/*
 .DS_Store
 *.swp
 writeup/
+writeupv2/

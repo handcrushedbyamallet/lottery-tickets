@@ -1,20 +1,13 @@
 import torch
 from torch import nn
 import torch.optim as optim
-from torch.nn.utils.prune import l1_unstructured
 
 from tqdm import tqdm
-from dataclasses import dataclass
 
 from models import LeNetMLP
-
+from pruning import prune_net, get_pruned_proportion, reset_network
 from utils import (
-    ExperimentConfig, ExperimentResult, create_log, write_result, load_data,
-    calc_accuracy, log_instance
-)
-
-from pruning import (
-    prune_layer, prune_net, copy_net, get_pruned_proportion, reset_network
+    ExperimentConfig, create_log, load_data, calc_accuracy, log_instance
 )
 
 
@@ -61,23 +54,17 @@ def run_train_and_prune_loop(config):
         reset_network(config, layers, net, initial_net)
         pruned_proportion = get_pruned_proportion(net)
         log_instance(config, config.train_dataset, classes, pruned_proportion, i, accuracy)
-        
-        if (config.eval_dataset != config.train_dataset) or config.split_classes:
-            train_eval, test_eval = load_data('data', classes=classes, dataset=config.eval_dataset)
-            accuracy = train_network(net, train_eval, test_eval, config.n_epochs)
-            log_instance(config, config.eval_dataset, classes, pruned_proportion, i, accuracy)
-            print(f"Accuracy on {config.eval_dataset} = {accuracy}")
 
-            if config.initialisation=='same':
-                copy_net(initial_net, net)
-            elif config.initialisation=='random':
-                copy_net(LeNetMLP(layers), net)
-            else:
-                raise ValueError(f"incorrect initialisation value '{config.initialisation}'")
+        for eval_dataset in config.eval_datasets:
+            train_eval, test_eval = load_data('data', classes=classes, dataset=eval_dataset)
+            accuracy = train_network(net, train_eval, test_eval, config.n_epochs)
+            reset_network(config, layers, net, initial_net)
+            log_instance(config, eval_dataset, classes, pruned_proportion, i, accuracy)
+            print(f"Accuracy on {eval_dataset} = {accuracy}")
 
 
 if __name__=="__main__":
-    experiment_name = 'test'
+    experiment_name = '4 datasets 10 epochs'
     create_log(experiment_name)
     for mode in ('same', 'random'):
         config = ExperimentConfig(
@@ -85,9 +72,9 @@ if __name__=="__main__":
             initialisation=mode,
             target_prune_proportion=0.9,
             iters=15,
-            n_epochs=4,
+            n_epochs=10,
             split_classes=None,
             train_dataset='MNIST',
-            eval_dataset='FashionMNIST'
+            eval_datasets=['FashionMNIST', 'CIFAR10', 'SumOfInputs']
         )
         run_train_and_prune_loop(config)

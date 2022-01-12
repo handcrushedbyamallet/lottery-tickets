@@ -7,10 +7,12 @@ from scipy import stats
 
 import torch
 from torch.utils.data import DataLoader
-from torchvision.datasets import MNIST, FashionMNIST
-from torchvision.transforms import Compose, Lambda, ToTensor
+from torchvision.datasets import MNIST, FashionMNIST, CIFAR10, EMNIST
+from torchvision.transforms import Compose, Lambda, ToTensor, Grayscale, CenterCrop
 
 from typing import Optional, List
+
+from torchvision.transforms.transforms import Grayscale
 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -24,7 +26,7 @@ class ExperimentConfig:
     n_epochs: int
     initialisation: str
     train_dataset: str
-    eval_dataset: str
+    eval_datasets: List[str]
     split_classes: str
 
 
@@ -78,17 +80,28 @@ def load_data(
     download: bool = True,
     classes: Optional[List[int]] = None
 ):
-    transform = Compose([ToTensor(), Lambda(lambda x: x.ravel())])
+    ToFlatTensor = Compose([ToTensor(), Lambda(lambda x: x.ravel())])
+    ToGrayscaleFlatTensor = Compose([
+        ToTensor(),
+        Grayscale(),
+        CenterCrop(28),
+        Lambda(lambda x: x.ravel())
+    ])
 
     if dataset == 'MNIST':
-        train = MNIST(root, train=True, download=download, transform=transform)
-        test = MNIST(root, train=False, download=download, transform=transform)
+        train = MNIST(root, train=True, download=download, transform=ToFlatTensor)
+        test = MNIST(root, train=False, download=download, transform=ToFlatTensor)
     elif dataset == 'FashionMNIST':
-        train = FashionMNIST(root, train=True, download=download, transform=transform)
-        test = FashionMNIST(root, train=False, download=download, transform=transform)
-    elif dataset == 'Polynomial':
-        train = Squared(train=True)
-        test = Squared(train=False)
+        train = FashionMNIST(root, train=True, download=download, transform=ToFlatTensor)
+        test = FashionMNIST(root, train=False, download=download, transform=ToFlatTensor)
+    elif dataset == 'CIFAR10':
+        train = CIFAR10(root, train=True, download=download, transform=ToGrayscaleFlatTensor)
+        test = CIFAR10(root, train=False, download=download, transform=ToGrayscaleFlatTensor)
+    elif dataset == 'SumOfInputs':
+        train = SumOfInputs(train=True)
+        test = SumOfInputs(train=False)
+    else:
+        raise NotImplementedError(f"Unknown dataset {dataset}")
 
     if classes is not None:
         train_idx = np.isin(train.targets, classes)
@@ -121,6 +134,19 @@ def calc_accuracy(net, test):
 
     return accuracy
 
+
+class SumOfInputs(torch.utils.data.Dataset):
+    def __init__(self, train):
+        self.train = train
+
+    def __len__(self):
+        return 50000 if self.train else 10000
+
+    def __getitem__(self, idx):
+        x = torch.rand(28 * 28, dtype=torch.float32) * 10 / (28 * 28)
+        y = torch.floor(torch.fmod(x.sum(), 10)).long()
+        assert y < 10
+        return x, y
 
 class Squared(torch.utils.data.Dataset):
     'Characterizes a dataset for PyTorch'
