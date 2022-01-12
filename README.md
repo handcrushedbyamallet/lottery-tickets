@@ -1,15 +1,15 @@
 # Lottery Ticket Hypothesis Extended Experiments
 
-## TODO
-- [X] Build LeNet like used in the paper
-- [X] Benchmark against randomly initialised weights
-- [?] Make pruning work for ConvNets?
-- [X] Collect and save results to csv file
-- [X] Run experiments in a loop with various configurations
-- [ ] Actually read paper
-- [X] Check if newly pruned model is robust to a change of classes
-- [X] Get it to work on a different dataset entirely
-- [X] Evaluate on different dataset at the end of every run
-- [ ] Do some serious refactoring 😭
-- [ ] Maybe experiment with even more random data?
+This repository contains a replication of some of the results from the paper
+"The Lottery Ticket Hypothesis: Finding Sparse, Trainable Neural Networks"
+https://arxiv.org/abs/1803.03635. The writeup can be found here: 
+https://www.overleaf.com/read/bcktvfprmdwn
 
+## Run the experiments
+The experiments can be run by running
+`lottery_ticket_hypothesis/run_experiment.py`. The parameters of the experiment
+can be changed by modifying the parameters to the `ExperimentConfig`
+instantiation in that file.
+
+## Plots
+The creation of the plots in the paper can be seen in the `notebooks` folder.
