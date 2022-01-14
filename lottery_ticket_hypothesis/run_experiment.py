@@ -50,9 +50,9 @@ def run_train_and_prune_loop(config):
     per_round_prune_proportion = 1 - (1 - config.target_prune_proportion)**(1/config.iters)
     for i in range(config.iters):
         accuracy = train_network(net, train, test, config.n_epochs)
+        pruned_proportion = get_pruned_proportion(net)
         prune_net(net, per_round_prune_proportion) 
         reset_network(config, layers, net, initial_net)
-        pruned_proportion = get_pruned_proportion(net)
         log_instance(config, config.train_dataset, classes, pruned_proportion, i, accuracy)
 
         for eval_dataset in config.eval_datasets:
@@ -64,17 +64,17 @@ def run_train_and_prune_loop(config):
 
 
 if __name__=="__main__":
-    experiment_name = '4 datasets 10 epochs'
+    experiment_name = 'test'
     create_log(experiment_name)
     for mode in ('same', 'random'):
         config = ExperimentConfig(
             experiment_id=experiment_name,
             initialisation=mode,
-            target_prune_proportion=0.9,
-            iters=15,
-            n_epochs=10,
+            target_prune_proportion=0.99,
+            iters=20,
+            n_epochs=3,
             split_classes=None,
             train_dataset='MNIST',
-            eval_datasets=['FashionMNIST', 'CIFAR10', 'SumOfInputs']
+            eval_datasets=['FashionMNIST', 'CIFAR10', 'MaxGroup']
         )
         run_train_and_prune_loop(config)

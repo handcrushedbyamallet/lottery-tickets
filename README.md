@@ -12,4 +12,4 @@ can be changed by modifying the parameters to the `ExperimentConfig`
 instantiation in that file.
 
 ## Plots
-The creation of the plots in the paper can be seen in the `notebooks` folder.
+The creation of the plots in the report can be seen in the `notebooks` folder.

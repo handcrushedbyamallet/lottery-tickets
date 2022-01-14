@@ -19,17 +19,19 @@ def prune_net(net, amount):
             prune_layer(layer, amount)
 
 
-def copy_net(unpruned, pruned):
+def copy_net(source, target):
     with torch.no_grad():
-        for pruned_layer, unpruned_layer in zip(pruned.layers, unpruned.layers):
-            pruned_layer.weight_orig.copy_(unpruned_layer.weight)
-            pruned_layer.bias_orig.copy_(unpruned_layer.bias)
+        for target_layer, source_layer in zip(target.layers, source.layers):
+            target_layer.weight_orig.copy_(source_layer.weight)
+            target_layer.bias_orig.copy_(source_layer.bias)
 
 
 def reset_network(config, layers, net, initial_net):
     if config.initialisation=='same':
+        print("Setting same initialisation")
         copy_net(initial_net, net)
     elif config.initialisation=='random':
+        print("Setting same initialisation")
         copy_net(LeNetMLP(layers), net)  # Set random initialisation
     else:
         raise ValueError(f"incorrect initialisation value '{config.initialisation}'")
@@ -40,8 +42,10 @@ def get_pruned_proportion(net):
     pruned = 0
 
     for layer in net.layers:
+        if not hasattr(layer, 'weight_mask'):
+            return 0
         total += layer.weight_mask.numel() + layer.bias_mask.numel()
         pruned += (layer.weight_mask == 0).sum() + (layer.bias_mask == 0).sum()
 
-    return pruned / total
+    return (pruned / total).item()
 

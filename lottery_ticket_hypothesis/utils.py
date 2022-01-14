@@ -53,7 +53,9 @@ def create_log(experiment_id):
 
 def write_result(experiment_config, experiment_result):
     with open(f'experiments/{experiment_config.experiment_id}.csv', 'a') as f:
-        experiment_data = list(dataclasses.asdict(experiment_config).values())
+        experiment_data = dataclasses.asdict(experiment_config)
+        experiment_data['eval_datasets'] = ' '.join(experiment_data['eval_datasets'])
+        experiment_data = list(experiment_data.values())
         result_data = [item for name, item in dataclasses.asdict(experiment_result).items()]
         f.write(','.join(map(str, experiment_data + result_data)))
         f.write('\n')
@@ -63,7 +65,7 @@ def log_instance(config, dataset, classes, pruned_proportion, i, accuracy):
     print(f"Proportion pruned: {pruned_proportion}")
 
     result = ExperimentResult(
-        prune_proportion=pruned_proportion.item(),
+        prune_proportion=pruned_proportion,
         accuracy=accuracy,
         iteration=i,
         classes=' '.join(map(str, classes)) if classes else classes,
@@ -100,6 +102,9 @@ def load_data(
     elif dataset == 'SumOfInputs':
         train = SumOfInputs(train=True)
         test = SumOfInputs(train=False)
+    elif dataset == 'MaxGroup':
+        train = MaxGroup(train=True)
+        test = MaxGroup(train=False)
     else:
         raise NotImplementedError(f"Unknown dataset {dataset}")
 
@@ -148,15 +153,18 @@ class SumOfInputs(torch.utils.data.Dataset):
         assert y < 10
         return x, y
 
-class Squared(torch.utils.data.Dataset):
-    'Characterizes a dataset for PyTorch'
+
+class MaxGroup(torch.utils.data.Dataset):
     def __init__(self, train):
-        self.train=train
+        self.train = train
 
     def __len__(self):
         return 50000 if self.train else 10000
 
-    def __getitem__(self, index):
-        x = np.random.rand(28 * 28).astype('float32')
-        y = stats.mode(np.floor(x * 10), axis=None).mode.astype('int64')[0]
-        return torch.tensor(x), torch.tensor(y)
+    def __getitem__(self, idx):
+        x = torch.rand(28 * 28, dtype=torch.float32) * 10 / (28 * 28)
+        y = x.numpy().copy()
+        intervals = list(range(0, len(x), len(x) // 10))
+        y = np.array([y[idx1:idx2].sum() for idx1, idx2 in zip(intervals[:-1], intervals[1:])])
+        y = np.argmax(y)
+        return x, torch.tensor(y)
