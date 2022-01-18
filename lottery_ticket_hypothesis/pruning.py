@@ -31,7 +31,7 @@ def reset_network(config, layers, net, initial_net):
         print("Setting same initialisation")
         copy_net(initial_net, net)
     elif config.initialisation=='random':
-        print("Setting same initialisation")
+        print("Setting random initialisation")
         copy_net(LeNetMLP(layers), net)  # Set random initialisation
     else:
         raise ValueError(f"incorrect initialisation value '{config.initialisation}'")

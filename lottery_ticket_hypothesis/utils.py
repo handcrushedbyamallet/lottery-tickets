@@ -3,7 +3,6 @@ import dataclasses
 from dataclasses import dataclass
 
 import numpy as np
-from scipy import stats
 
 import torch
 from torch.utils.data import DataLoader
@@ -28,6 +27,7 @@ class ExperimentConfig:
     train_dataset: str
     eval_datasets: List[str]
     split_classes: str
+    noise: bool
 
 
 @dataclass
@@ -75,20 +75,44 @@ def log_instance(config, dataset, classes, pruned_proportion, i, accuracy):
     return pruned_proportion
 
 
+class GaussianNoise:
+    """https://discuss.pytorch.org/t/how-to-add-noise-to-mnist-dataset-when-using-pytorch/59745"""
+    def __init__(self, mean=0, std=0.1):
+        self.std = std
+        self.mean = mean
+
+    def __call__(self, tensor):
+        return tensor + torch.randn(tensor.size()) * self.std + self.mean
+
+    def __repr__(self):
+        return self.__class__.__name__ + f'(mean={self.mean}, std={self.std})'
+
+
 def load_data(
     root: str,
     dataset: str,
     batch_size: int = 128,
     download: bool = True,
-    classes: Optional[List[int]] = None
+    classes: Optional[List[int]] = None,
+    noise: bool = False
 ):
-    ToFlatTensor = Compose([ToTensor(), Lambda(lambda x: x.ravel())])
-    ToGrayscaleFlatTensor = Compose([
-        ToTensor(),
-        Grayscale(),
-        CenterCrop(28),
-        Lambda(lambda x: x.ravel())
-    ])
+    if noise:
+        ToFlatTensor = Compose([ToTensor(), GaussianNoise(), Lambda(lambda x: x.ravel())])
+        ToGrayscaleFlatTensor = Compose([
+            ToTensor(),
+            Grayscale(),
+            CenterCrop(28),
+            GaussianNoise(),
+            Lambda(lambda x: x.ravel())
+        ])
+    else:
+        ToFlatTensor = Compose([ToTensor(), Lambda(lambda x: x.ravel())])
+        ToGrayscaleFlatTensor = Compose([
+            ToTensor(),
+            Grayscale(),
+            CenterCrop(28),
+            Lambda(lambda x: x.ravel())
+        ])
 
     if dataset == 'MNIST':
         train = MNIST(root, train=True, download=download, transform=ToFlatTensor)

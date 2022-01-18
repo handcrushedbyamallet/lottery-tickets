@@ -16,13 +16,12 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 def train_network(net, train, test, epochs):
     net.to(device)
-    optimizer = optim.Adam(net.parameters(), lr=1.2e-3)
+    optimizer = optim.SGD(net.parameters(), lr=1.2e-3)#, lr=1.2e-3)
     loss_fn = nn.CrossEntropyLoss()
     prog_bar = tqdm(list(range(epochs)))
     for epoch in prog_bar:
         for data in train:
             inputs, labels = data[0].to(device), data[1].to(device)
-
             optimizer.zero_grad()
             preds = net(inputs)
             loss = loss_fn(preds, labels)
@@ -40,7 +39,12 @@ def run_train_and_prune_loop(config):
         classes = [0, 1, 2, 3, 4]
     else:
         classes = None
-    train, test = load_data('data', dataset=config.train_dataset, classes=classes)
+    
+    train, test = load_data('data', dataset=config.train_dataset, classes=classes, noise=config.noise)
+
+    eval_datasets = {}
+    for dataset_name in config.eval_datasets:
+        eval_datasets[dataset_name] = load_data('data', classes=classes, dataset=dataset_name, noise=config.noise)
     
     layers = [28*28, 300, 100, 10]
     net = LeNetMLP(layers)
@@ -55,26 +59,27 @@ def run_train_and_prune_loop(config):
         reset_network(config, layers, net, initial_net)
         log_instance(config, config.train_dataset, classes, pruned_proportion, i, accuracy)
 
-        for eval_dataset in config.eval_datasets:
-            train_eval, test_eval = load_data('data', classes=classes, dataset=eval_dataset)
+        for dataset_name, eval_dataset in eval_datasets.items():
+            train_eval, test_eval = eval_dataset
             accuracy = train_network(net, train_eval, test_eval, config.n_epochs)
             reset_network(config, layers, net, initial_net)
-            log_instance(config, eval_dataset, classes, pruned_proportion, i, accuracy)
-            print(f"Accuracy on {eval_dataset} = {accuracy}")
+            log_instance(config, dataset_name, classes, pruned_proportion, i, accuracy)
+            print(f"Accuracy on {dataset_name} = {accuracy}")
 
 
 if __name__=="__main__":
-    experiment_name = 'test'
+    experiment_name = 'SGD Normal LR'
     create_log(experiment_name)
     for mode in ('same', 'random'):
         config = ExperimentConfig(
             experiment_id=experiment_name,
             initialisation=mode,
             target_prune_proportion=0.99,
-            iters=20,
-            n_epochs=3,
+            iters=7,
+            n_epochs=10,
             split_classes=None,
             train_dataset='MNIST',
-            eval_datasets=['FashionMNIST', 'CIFAR10', 'MaxGroup']
+            eval_datasets=['FashionMNIST', 'CIFAR10', 'MaxGroup'],
+            noise=True
         )
         run_train_and_prune_loop(config)
