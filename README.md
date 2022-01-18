@@ -2,8 +2,7 @@
 
 This repository contains a replication of some of the results from the paper
 "The Lottery Ticket Hypothesis: Finding Sparse, Trainable Neural Networks"
-https://arxiv.org/abs/1803.03635. The writeup can be found here: 
-https://www.overleaf.com/read/bcktvfprmdwn
+https://arxiv.org/abs/1803.03635.
 
 ## Run the experiments
 The experiments can be run by running
